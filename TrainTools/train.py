@@ -104,11 +104,12 @@ def train(
     os.makedirs(save_dir, exist_ok=True)
 
     # Internal namespace required by QANet.__init__ and data utilities
-    args = argparse.Namespace({k: v for k, v in locals().items()})
+    args_dict = {k: v for k, v in locals().items()}
+    args = argparse.Namespace(**args_dict)
 
     with open(os.path.join(save_dir, "run_config.json"), "w") as f:
         json.dump(vars(args), f, indent=2)
-
+        
     sanity_check_cache(args)
     word_mat, char_mat   = load_word_char_mats(args)
     model                = QANet(word_mat, char_mat, args).to(DEVICE)
