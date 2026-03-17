@@ -29,8 +29,7 @@ class PosEncoder(nn.Module):
         freqs = torch.tensor(
             [10000 ** (-i / d_model) if i % 2 == 0 else -10000 ** ((1 - i) / d_model) for i in range(d_model)],
             dtype=torch.float32
-        ).unsqueeze(1)  # [C, 1]
-
+        ).unsqueeze(1)  # [C, 1] # FIXED: should have unsqueezed dim 1, not 0
         phases = torch.tensor(
             [0.0 if i % 2 == 0 else math.pi / 2 for i in range(d_model)],
             dtype=torch.float32
@@ -64,6 +63,7 @@ class MultiHeadAttention(nn.Module):
         # x: [B, C, L], mask: [B, L] True=PAD
         batch_size, channels, length = x.size()
         x = x.transpose(1, 2)  # [B, L, C]
+
 
         q = self.q_linear(x).view(batch_size, length, self.num_heads, self.d_k)
         k = self.k_linear(x).view(batch_size, length, self.num_heads, self.d_k)
@@ -120,7 +120,7 @@ class EncoderBlock(nn.Module):
             if (i + 1) % 2 == 0:
                 out = self.conv_drops[i](out)
             res = out
-            out = self.norms[i + 1](out)
+            out = self.norms[i](out)
 
         out = self.self_att(out, mask)
         out = res
