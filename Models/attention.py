@@ -28,9 +28,9 @@ class CQAttention(nn.Module):
         qmask = qmask.unsqueeze(1)  # [B, 1, Lq]
 
         shape = (C.size(0), C.size(1), Q.size(1), C.size(2))  # [B, Lc, Lq, C]
-        Ct = C.unsqueeze(2).expand(shape)
-        Qt = Q.unsqueeze(1).expand(shape)
-        CQ = Ct * Qt
+        Ct = C.unsqueeze(2).expand(shape) # [B, Lc, 1:(Lc), C]
+        Qt = Q.unsqueeze(1).expand(shape) # [B, 1:(Lc), Lc, C]
+        CQ = Ct * Qt  # Elementwise?
         S = torch.cat([Ct, Qt, CQ], dim=3)  # [B, Lc, Lq, 3C]
         S = torch.matmul(S, self.w)  # [B, Lc, Lq]
 
