@@ -32,6 +32,7 @@ class SGDMomentum(Optimizer):
             mu = group["momentum"]
             wd = group["weight_decay"]
 
+            # for each parameter tensor
             for p in group["params"]:
                 if p.grad is None:
                     continue
@@ -51,7 +52,7 @@ class SGDMomentum(Optimizer):
                 v = state["velocity"]
 
                 # v = momentum * v + grad
-                v.mul_(mu).sub_(grad)
+                v.mul_(mu).add_(grad) # CHANGE: add grad instead of subract
 
                 p.add_(v, alpha=-lr)
 

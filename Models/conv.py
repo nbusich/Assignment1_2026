@@ -23,7 +23,8 @@ class Conv1d(nn.Module):
         kernel_size: int,
         groups: int = 1,
         padding: int = 0,
-        bias: bool = True,
+        bias: bool = True ,
+        init_name: str = "kaiming"
     ):
         super().__init__()
         self.in_channels = in_channels
@@ -39,6 +40,11 @@ class Conv1d(nn.Module):
             self.bias = nn.Parameter(torch.empty(out_channels))
         else:
             self.register_parameter("bias", None)
+
+        init_fn = initializations[init_name]
+        init_fn(self.weight)
+        if self.bias is not None:
+            constant_(self.bias, 0.0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: [B, C_in, L]
@@ -94,7 +100,8 @@ class Conv2d(nn.Module):
         kernel_size: int,
         groups: int = 1,
         padding: int = 0,
-        bias: bool = True,
+        bias: bool = True ,
+        init_name: str = "kaiming"
     ):
         super().__init__()
         self.in_channels = in_channels
@@ -110,6 +117,11 @@ class Conv2d(nn.Module):
             self.bias = nn.Parameter(torch.empty(out_channels))
         else:
             self.register_parameter("bias", None)
+
+        init_fn = initializations[init_name]
+        init_fn(self.weight)
+        if self.bias is not None:
+            constant_(self.bias, 0.0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: [B, C_in, H, W]
