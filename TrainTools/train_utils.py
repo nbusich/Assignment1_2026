@@ -27,13 +27,13 @@ def train_single_epoch(model, optimizer, scheduler, data_iter,
         Qwid, Qcid = Qwid.to(device), Qcid.to(device)
         y1, y2     = y1.to(device),   y2.to(device)
 
-        p1, p2 = model(Cwid, Ccid, Qwid, Qcid)
-        loss   = loss_fn(p1, p2, y1, y2)
+        logit1, logit2 = model(Cwid, Ccid, Qwid, Qcid)
+        loss   = loss_fn(logit1, logit2, y1, y2)
         loss_list.append(float(loss.item()))
 
         loss.backward()
-        optimizer.step()
         torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+        optimizer.step()
         scheduler.step()
 
     mean_loss = float(np.mean(loss_list))
