@@ -56,7 +56,7 @@ def train(
     norm_groups:        int   = 8,              # num_groups for group_norm
 
     # ── Optimizer hyperparameters ─────────────────────────────────────────────
-    learning_rate:      float = 1e-3,
+    learning_rate:      float = 5e-3,
     beta1:              float = 0.8,
     beta2:              float = 0.999,
     eps:                float = 1e-7,
