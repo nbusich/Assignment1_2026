@@ -21,10 +21,13 @@ def step_scheduler(optimizer, args):
         gamma=getattr(args, "lr_gamma", 0.5),
     )
 
+def lambda_lr(t):
+  """ This could be modified to return a different lr multiplier""" 
+  return 1.0
 
 def lambda_scheduler(optimizer, args):
     """LambdaLR with a constant factor of 1.0 — learning rate stays fixed."""
-    return LambdaLR(optimizer, lr_lambda=lambda _: 1.0)
+    return LambdaLR(optimizer, lr_lambda=lambda_lr)
 
 
 # ── Registry ─────────────────────────────────────────────────────────────────
