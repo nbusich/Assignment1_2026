@@ -191,7 +191,7 @@ def train(
         dev_f1 = dv_metrics["f1"]
         dev_em = dv_metrics["exact_match"]
 
-        if dev_f1 < best_f1 and dev_em < best_em:
+        if dev_f1 < best_f1 or dev_em < best_em:
             patience += 1
             if patience > early_stop:
                 print("Early stopping triggered.")

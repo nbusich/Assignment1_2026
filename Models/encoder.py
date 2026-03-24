@@ -64,12 +64,11 @@ class MultiHeadAttention(nn.Module):
         batch_size, channels, length = x.size()
         x = x.transpose(1, 2)  # [B, L, C]
 
-
-        q = self.q_linear(x).view(batch_size, length, self.num_heads, self.d_k)
+        q = self.q_linear(x).view(batch_size, length, self.num_heads, self.d_k) # B, L, h, d_k
         k = self.k_linear(x).view(batch_size, length, self.num_heads, self.d_k)
         v = self.v_linear(x).view(batch_size, length, self.num_heads, self.d_k)
 
-        q = q.permute(2, 0, 1, 3).contiguous().view(batch_size * self.num_heads, length, self.d_k)
+        q = q.permute(2, 0, 1, 3).contiguous().view(batch_size * self.num_heads, length, self.d_k) # (h, B, L, d_k) --> B*H, L, d_k
         k = k.permute(2, 0, 1, 3).contiguous().view(batch_size * self.num_heads, length, self.d_k)
         v = v.permute(2, 0, 1, 3).contiguous().view(batch_size * self.num_heads, length, self.d_k)
 
@@ -77,14 +76,13 @@ class MultiHeadAttention(nn.Module):
             mask = mask.bool()
         attn_mask = mask.unsqueeze(1).expand(-1, length, -1).repeat(self.num_heads, 1, 1)  # [B*h, L, L]
 
-        attn = self.scale * torch.bmm(q, k.transpose(1, 2))
-        attn = mask_logits(attn, attn_mask)
+        attn = self.scale * torch.bmm(q, k.transpose(1, 2)) # (B*H, L, L)
+        attn = mask_logits(attn, attn_mask) 
         attn = F.softmax(attn, dim=2)
         attn = self.drop(attn)
-
-        out = torch.bmm(attn, v)  # [B*h, L, d_k]
-        out = out.view(batch_size, self.num_heads, length, self.d_k)
-        out = out.permute(0, 2, 1, 3).contiguous().view(batch_size, length, self.d_model)
+        out = torch.bmm(attn, v)  # (BH, L, L) @ (BH, L, D_k) --> (BH, L, d_k)
+        out = out.view(self.num_heads, batch_size, length, self.d_k)  # (H, B, L, d_k)
+        out = out.permute(1, 2, 0, 3).contiguous().view(batch_size, length, self.d_model) # (B, L, H, d_k) --> (B, L, C (L*d_k))
         out = self.fc(out)
         out = self.drop(out)
         return out.transpose(1, 2)  # [B, C, L]
