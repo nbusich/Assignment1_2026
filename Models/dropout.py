@@ -15,3 +15,14 @@ class Dropout(nn.Module):
             return x
         mask = torch.bernoulli(torch.full_like(x, 1.0 - self.p))
         return x * mask / (1-self.p)
+
+# class Dropout(nn.Module):
+#     """Inverted dropout: keeps each element with probability (1-p) and
+#     scales surviving elements by 1/(1-p) so the expected value is preserved."""
+
+#     def __init__(self, p: float = 0.0):
+#         super().__init__()
+#         self.drop = nn.Dropout(p)
+
+#     def forward(self, x: torch.Tensor) -> torch.Tensor:
+#         return self.drop(x)

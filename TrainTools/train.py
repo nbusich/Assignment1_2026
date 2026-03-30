@@ -39,7 +39,7 @@ def train(
     ckpt_name:          str   = "model.pt",
 
     # ── Training loop ─────────────────────────────────────────────────────────
-    batch_size:         int   = 8,
+    batch_size:         int   = 16,
     num_steps:          int   = 60000,
     checkpoint:         int   = 200,
     val_num_batches:    int   = 150,
@@ -52,11 +52,11 @@ def train(
     optimizer_name:     str   = "adam",
     scheduler_name:     str   = "lambda",
     loss_name:          str   = "qa_nll",
-    norm_name:          str   = "layer_norm",   # "layer_norm" | "group_norm"
+    norm_name:          str   = "group_norm",   # "layer_norm" | "group_norm"
     norm_groups:        int   = 8,              # num_groups for group_norm
 
     # ── Optimizer hyperparameters ─────────────────────────────────────────────
-    learning_rate:      float = 5e-3,
+    learning_rate:      float = 1e-3,
     beta1:              float = 0.8,
     beta2:              float = 0.999,
     eps:                float = 1e-7,
