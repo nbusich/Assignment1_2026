@@ -18,7 +18,6 @@ def train_single_epoch(model, optimizer, scheduler, data_iter,
     """
     model.train()
     loss_list = []
-
     for _ in tqdm(range(steps), total=steps):
         optimizer.zero_grad(set_to_none=True)
 
@@ -32,7 +31,7 @@ def train_single_epoch(model, optimizer, scheduler, data_iter,
         loss_list.append(float(loss.item()))
 
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+        total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)    
         optimizer.step()
         scheduler.step()
 

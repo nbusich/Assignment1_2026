@@ -39,7 +39,7 @@ def train(
     ckpt_name:          str   = "model.pt",
 
     # ── Training loop ─────────────────────────────────────────────────────────
-    batch_size:         int   = 8,
+    batch_size:         int   = 16,
     num_steps:          int   = 60000,
     checkpoint:         int   = 200,
     val_num_batches:    int   = 150,
@@ -52,7 +52,7 @@ def train(
     optimizer_name:     str   = "adam",
     scheduler_name:     str   = "lambda",
     loss_name:          str   = "qa_nll",
-    norm_name:          str   = "layer_norm",   # "layer_norm" | "group_norm"
+    norm_name:          str   = "group_norm",   # "layer_norm" | "group_norm"
     norm_groups:        int   = 8,              # num_groups for group_norm
 
     # ── Optimizer hyperparameters ─────────────────────────────────────────────
@@ -191,15 +191,16 @@ def train(
         dev_f1 = dv_metrics["f1"]
         dev_em = dv_metrics["exact_match"]
 
-        if dev_f1 < best_f1 and dev_em < best_em:
+        if dev_f1 > best_f1 or dev_em > best_em:
+            patience = 0
+            best_f1  = max(best_f1, dev_f1)
+            best_em  = max(best_em, dev_em)
+        else:
             patience += 1
             if patience > early_stop:
                 print("Early stopping triggered.")
                 break
-        else:
-            patience = 0
-            best_f1  = max(best_f1, dev_f1)
-            best_em  = max(best_em, dev_em)
+            
 
         save_checkpoint(
             save_dir, ckpt_name, model, optimizer, scheduler,
