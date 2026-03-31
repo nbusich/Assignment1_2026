@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .inception import InceptionBlock
 from .conv import DepthwiseSeparableConv
 from .dropout import Dropout
 from .Normalizations import get_norm
@@ -89,9 +90,9 @@ class MultiHeadAttention(nn.Module):
 
 
 class EncoderBlock(nn.Module):
-    def __init__(self, d_model: int, num_heads: int, dropout: float, conv_num: int, k: int, length: int, init_name: str = "kaiming", act_name: str = "relu", norm_name: str = "layer_norm", norm_groups: int = 8):
+    def __init__(self, d_model: int, num_heads: int, dropout: float, conv_num: int, k: int, length: int, conv_class: type[nn.Module], init_name: str = "kaiming", act_name: str = "relu", norm_name: str = "layer_norm", norm_groups: int = 8):
         super().__init__()
-        self.convs = nn.ModuleList([DepthwiseSeparableConv(d_model, d_model, k, init_name=init_name) for _ in range(conv_num)])
+        self.convs = nn.ModuleList([conv_class(d_model, d_model, k, init_name=init_name) for _ in range(conv_num)])
         # Stochastic-depth dropout: p scales linearly with layer depth.
         self.conv_drops = nn.ModuleList([Dropout(dropout * (i + 1) / conv_num) for i in range(conv_num)])
         self.drop = Dropout(dropout)

@@ -3,6 +3,7 @@ import copy
 import torch
 import torch.nn as nn
 
+from .inception import InceptionBlock
 from .conv import DepthwiseSeparableConv
 from .embedding import Embedding
 from .encoder import EncoderBlock
@@ -33,7 +34,10 @@ class QANet(nn.Module):
         act_name    = str(getattr(args, "activation",  "relu"))
         norm_name   = str(getattr(args, "norm_name",   "layer_norm"))
         norm_groups = int(getattr(args, "norm_groups", 8))
+        use_inception = bool(getattr(args, "use_inception", False))
 
+        ConvBlock = InceptionBlock if use_inception else DepthwiseSeparableConv   
+        
         self.char_emb = nn.Embedding.from_pretrained(
             torch.tensor(char_mat, dtype=torch.float32),
             freeze=pretrained_char
@@ -44,16 +48,16 @@ class QANet(nn.Module):
         )
 
         self.emb = Embedding(d_word, d_char, dropout, dropout_char, init_name=init_name, act_name=act_name)
-        self.context_conv = DepthwiseSeparableConv(d_word + d_char, d_model, 5, init_name=init_name)
-        self.question_conv = DepthwiseSeparableConv(d_word + d_char, d_model, 5, init_name=init_name)
+        self.context_conv = ConvBlock(d_word + d_char, d_model, 5, init_name=init_name)
+        self.question_conv = ConvBlock(d_word + d_char, d_model, 5, init_name=init_name)
 
-        self.c_emb_enc = EncoderBlock(d_model, num_heads, dropout, conv_num=4, k=7, length=len_c, init_name=init_name, act_name=act_name, norm_name=norm_name, norm_groups=norm_groups)
-        self.q_emb_enc = EncoderBlock(d_model, num_heads, dropout, conv_num=4, k=7, length=len_q, init_name=init_name, act_name=act_name, norm_name=norm_name, norm_groups=norm_groups)
+        self.c_emb_enc = EncoderBlock(d_model, num_heads, dropout, conv_num=4, k=7, length=len_c, conv_class=ConvBlock, init_name=init_name, act_name=act_name, norm_name=norm_name, norm_groups=norm_groups)
+        self.q_emb_enc = EncoderBlock(d_model, num_heads, dropout, conv_num=4, k=7, length=len_q, conv_class=ConvBlock, init_name=init_name, act_name=act_name, norm_name=norm_name, norm_groups=norm_groups)
 
         self.cq_att = CQAttention(d_model, dropout)
-        self.cq_resizer = DepthwiseSeparableConv(d_model * 4, d_model, 5, init_name=init_name)
+        self.cq_resizer = ConvBlock(d_model * 4, d_model, 5, init_name=init_name)
 
-        base_enc = EncoderBlock(d_model, num_heads, dropout, conv_num=2, k=5, length=len_c, init_name=init_name, act_name=act_name, norm_name=norm_name, norm_groups=norm_groups)
+        base_enc = EncoderBlock(d_model, num_heads, dropout, conv_num=2, k=5, length=len_c, conv_class=ConvBlock, init_name=init_name, act_name=act_name, norm_name=norm_name, norm_groups=norm_groups)
         self.model_enc_blks = nn.ModuleList([copy.deepcopy(base_enc) for _ in range(7)])
 
         self.out = Pointer(d_model)
