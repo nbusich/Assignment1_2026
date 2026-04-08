@@ -19,7 +19,7 @@ class CQAttention(nn.Module):
         self.w = nn.Parameter(w)
 
     #swapped arguments to change which one is qmask and which is cmask in call
-    def forward(self, C: torch.Tensor, Q: torch.Tensor, qmask: torch.Tensor, cmask: torch.Tensor) -> torch.Tensor:
+    def forward(self, C: torch.Tensor, Q: torch.Tensor, cmask: torch.Tensor, qmask: torch.Tensor) -> torch.Tensor:
         # C: [B, C, Lc], Q: [B, C, Lq]
         C = C.transpose(1, 2)  # [B, Lc, C]
         Q = Q.transpose(1, 2)  # [B, Lq, C]
