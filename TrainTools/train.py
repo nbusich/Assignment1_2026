@@ -79,6 +79,9 @@ def train(
     dropout_char:       float = 0.05,
     pretrained_char:    bool  = False,
 
+    # ── Experimental Settings ─────────────────────────────────────────────────
+    use_inception:      bool = True,
+
     # ── Stubs for bug-injection phase ─────────────────────────────────────────
     use_batch_norm:     bool  = False,
     activation:         str   = "relu",
