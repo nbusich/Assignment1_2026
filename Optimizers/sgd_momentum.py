@@ -41,7 +41,7 @@ class SGDMomentum(Optimizer):
 
                 # Weight decay
                 if wd != 0.0:
-                    grad = grad.add(p, alpha=wd)
+                    grad = grad.add(p, alpha=-wd)
 
                 state = self.state[p]
 
