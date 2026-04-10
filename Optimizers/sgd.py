@@ -24,7 +24,6 @@ class SGD(Optimizer):
             with torch.enable_grad():
                 loss = closure()
 
-        group_num = 0
         for group in self.param_groups:
             lr = group["lr"]
             wd = group["weight_decay"]
@@ -37,12 +36,8 @@ class SGD(Optimizer):
 
                 # Weight decay: equivalent to L2 regularisation
                 if wd != 0.0:
-                    grad = grad.add(p, alpha=wd)
-                # Now, we in-place add gradients scaled by negative learning rate
+                    grad = grad.add(p, alpha=-wd)
+                    
                 p.add_(grad, alpha=-lr)
-                # combines to:
-                # p = p - lr * (grad - wd*p)
-                # WRONG, should be:
-                # p = p - lr * (grad + wd*p)
 
         return loss
