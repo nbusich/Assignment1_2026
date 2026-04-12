@@ -41,7 +41,7 @@ class SGDMomentum(Optimizer):
 
                 # Weight decay
                 if wd != 0.0:
-                    grad = grad.add(p, alpha=-wd)
+                    grad = grad.add(p, alpha=wd)
 
                 state = self.state[p]
 
@@ -52,8 +52,8 @@ class SGDMomentum(Optimizer):
                 v = state["velocity"]
 
                 # v = momentum * v + grad
-                v.mul_(mu).add_(grad) # CHANGE: add grad instead of subract
-
+                v.mul_(mu).add_(grad)
+                #  p = p - lr * v
                 p.add_(v, alpha=-lr)
 
         return loss
