@@ -80,7 +80,7 @@ def train(
     pretrained_char:    bool  = False,
 
     # ── Experimental Settings ─────────────────────────────────────────────────
-    use_inception:      bool = True,
+    use_inception:      bool = False,
 
     # ── Stubs for bug-injection phase ─────────────────────────────────────────
     use_batch_norm:     bool  = False,
@@ -133,11 +133,12 @@ def train(
 
     if (epoch_based):
 
-        checkpoint = len(train_loader)
-        num_steps = len(train_loader) * epoch_amount
+        checkpoint = 200
+        epoch_size = len(train_loader)
+        num_steps = epoch_size * epoch_amount
     
         print("Training Parameters changed for epoch")
-        print(f"Checkpoint: {len(train_loader)}")
+        print(f"Epoch amount: {epoch_size}")
         print(f"Number of Steps: {num_steps}\n")
 
 
