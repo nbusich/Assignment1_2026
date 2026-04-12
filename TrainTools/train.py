@@ -86,6 +86,11 @@ def train(
     use_batch_norm:     bool  = False,
     activation:         str   = "relu",
     init_name:          str   = "kaiming",  # "kaiming" | "kaiming_uniform" | "xavier" | "xavier_normal"
+    
+    # self added 
+    epoch_based: bool = False,
+    epoch_amount:  int = 0,
+
 ) -> dict:
     """
     Train QANet on SQuAD v1.1.
@@ -125,6 +130,16 @@ def train(
         train_dataset, batch_size,
         shuffle=True, pin_memory=(DEVICE.type == "cuda"),
     )
+
+    if (epoch_based):
+
+        checkpoint = len(train_loader)
+        num_steps = len(train_loader) * epoch_amount
+    
+        print("Training Parameters changed for epoch")
+        print(f"Checkpoint: {len(train_loader)}")
+        print(f"Number of Steps: {num_steps}\n")
+
 
     def _infinite(loader):
         while True:
