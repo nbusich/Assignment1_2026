@@ -55,19 +55,20 @@ PROGRESS_FILE = os.path.join(RESULTS_DIR, "progress.json")
 
 
 def count_parameters(use_inception: bool, epoch_based: bool,
-    epoch_amount:  int, norm_name="group_norm") -> dict:
+    epoch_amount:  int, norm_name="group_norm",inverse_encoder=False) -> dict:
     """Instantiate a model and count trainable / total parameters."""
     args_dict = {
         **COMMON_ARGS,
         "use_inception": use_inception,
         "epoch_based": epoch_based,
         "epoch_amount":  epoch_amount,
+        "inverse_encoder": inverse_encoder,
         "seed": 0,
         "para_limit": 400, "ques_limit": 50, "char_limit": 16,
         "d_model": 96, "num_heads": 8, "glove_dim": 300, "char_dim": 64,
         "dropout": 0.1, "dropout_char": 0.05, "pretrained_char": False,
         "norm_name": norm_name, "norm_groups": 8,
-        "activation": "relu", "init_name": "kaiming", 
+        "activation": "relu", "init_name": "kaiming",
     }
     args = argparse.Namespace(**args_dict)
     word_mat, char_mat = load_word_char_mats(args)
@@ -103,7 +104,7 @@ def run_single(name: str, seed: int, use_inception: bool, epoch_based: bool,
     epoch_amount:  int, norm_name="group_norm",inverse_encoder=False) -> dict:
     """Train + evaluate one configuration with one seed."""
     args = {**COMMON_ARGS, "use_inception": use_inception, "seed": seed, "epoch_based": epoch_based,
-    "epoch_amount":  epoch_amount, "norm_name": norm_name, "inverseencoder": inverse_encoder}
+    "epoch_amount":  epoch_amount, "norm_name": norm_name, "inverse_encoder": inverse_encoder}
     args["save_dir"] = os.path.join("_model", name, f"seed_{seed}")
     args["log_dir"]  = os.path.join("_log", name, f"seed_{seed}")
 
