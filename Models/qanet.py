@@ -6,7 +6,7 @@ import torch.nn as nn
 from .inception import InceptionBlock
 from .conv import DepthwiseSeparableConv
 from .embedding import Embedding
-from .encoder import EncoderBlock
+from .encoder import EncoderBlock, GlobalEncoderBlock
 from .attention import CQAttention
 from .heads import Pointer
 
@@ -35,8 +35,10 @@ class QANet(nn.Module):
         norm_name   = str(getattr(args, "norm_name",   "layer_norm"))
         norm_groups = int(getattr(args, "norm_groups", 8))
         use_inception = bool(getattr(args, "use_inception", False))
+        inverse_encoder = bool(getattr(args, "inverse_encoder", False))
 
         ConvBlock = InceptionBlock if use_inception else DepthwiseSeparableConv   
+        EncoderBlock =  GlobalEncoderBlock if inverse_encoder else EncoderBlock   
         
         self.char_emb = nn.Embedding.from_pretrained(
             torch.tensor(char_mat, dtype=torch.float32),

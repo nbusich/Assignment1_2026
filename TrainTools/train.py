@@ -21,7 +21,7 @@ from Schedulers import schedulers
 from Tools import set_seed
 from EvaluateTools.eval_utils import run_eval
 from TrainTools.train_utils import train_single_epoch, save_checkpoint
-
+import math
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -91,6 +91,8 @@ def train(
     epoch_based: bool = False,
     epoch_amount:  int = 0,
 
+    inverse_encoder: bool = False,
+    
 ) -> dict:
     """
     Train QANet on SQuAD v1.1.
@@ -135,7 +137,7 @@ def train(
 
         checkpoint = 200
         epoch_size = len(train_loader)
-        num_steps = epoch_size * epoch_amount
+        num_steps = math.floor(epoch_size * epoch_amount)
     
         print("Training Parameters changed for epoch")
         print(f"Epoch amount: {epoch_size}")

@@ -41,9 +41,9 @@ COMMON_ARGS = dict(
     save_dir        = "_model",
     log_dir         = "_log",
     num_steps       = 2000,
-    batch_size      = 16,
+    batch_size      = 32,
     optimizer_name  = "adam",
-    scheduler_name  = "lambda",
+    scheduler_name  = "cosine",
     loss_name       = "qa_nll",
 )
 
@@ -54,17 +54,20 @@ PROGRESS_FILE = os.path.join(RESULTS_DIR, "progress.json")
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
-def count_parameters(use_inception: bool) -> dict:
+def count_parameters(use_inception: bool, epoch_based: bool,
+    epoch_amount:  int, norm_name="group_norm") -> dict:
     """Instantiate a model and count trainable / total parameters."""
     args_dict = {
         **COMMON_ARGS,
         "use_inception": use_inception,
+        "epoch_based": epoch_based,
+        "epoch_amount":  epoch_amount,
         "seed": 0,
         "para_limit": 400, "ques_limit": 50, "char_limit": 16,
         "d_model": 96, "num_heads": 8, "glove_dim": 300, "char_dim": 64,
         "dropout": 0.1, "dropout_char": 0.05, "pretrained_char": False,
-        "norm_name": "group_norm", "norm_groups": 8,
-        "activation": "relu", "init_name": "kaiming",
+        "norm_name": norm_name, "norm_groups": 8,
+        "activation": "relu", "init_name": "kaiming", 
     }
     args = argparse.Namespace(**args_dict)
     word_mat, char_mat = load_word_char_mats(args)
@@ -96,9 +99,11 @@ def is_run_completed(progress: dict, name: str, seed: int) -> bool:
 # ── Single run ───────────────────────────────────────────────────────────────
 
 
-def run_single(name: str, seed: int, use_inception: bool) -> dict:
+def run_single(name: str, seed: int, use_inception: bool, epoch_based: bool,
+    epoch_amount:  int, norm_name="group_norm",inverse_encoder=False) -> dict:
     """Train + evaluate one configuration with one seed."""
-    args = {**COMMON_ARGS, "use_inception": use_inception, "seed": seed}
+    args = {**COMMON_ARGS, "use_inception": use_inception, "seed": seed, "epoch_based": epoch_based,
+    "epoch_amount":  epoch_amount, "norm_name": norm_name, "inverseencoder": inverse_encoder}
     args["save_dir"] = os.path.join("_model", name, f"seed_{seed}")
     args["log_dir"]  = os.path.join("_log", name, f"seed_{seed}")
 
@@ -130,6 +135,8 @@ def run_single(name: str, seed: int, use_inception: bool) -> dict:
         "name":                name,
         "seed":                seed,
         "use_inception":       use_inception,
+        "epoch_based":         epoch_based,
+        "epoch_amount":        epoch_amount,
         "history":             train_results["history"],
         "best_dev_f1":         train_results["best_f1"],
         "best_dev_em":         train_results["best_em"],
@@ -190,7 +197,7 @@ def aggregate_histories(runs: list) -> dict:
 def plot_results(progress: dict):
     os.makedirs(RESULTS_DIR, exist_ok=True)
     baseline_runs  = [r for r in progress["completed_runs"] if r["name"] == "baseline"]
-    inception_runs = [r for r in progress["completed_runs"] if r["name"] == "inception"]
+    inception_runs = [r for r in progress["completed_runs"] if r["name"] == "experimental"]
     if not baseline_runs or not inception_runs:
         print("Not enough data to plot.")
         return
@@ -220,11 +227,11 @@ def plot_results(progress: dict):
                     color="tab:blue", linewidth=2, label="baseline (mean)")
         if inc_agg:
             ax.plot(inc_agg["steps"], [p["mean"] for p in inc_agg[key]],
-                    color="tab:orange", linewidth=2, label="inception (mean)")
+                    color="tab:orange", linewidth=2, label="experimental (mean)")
         ax.set_xlabel("Step"); ax.set_ylabel(title); ax.set_title(title)
         ax.legend(); ax.grid(True, alpha=0.3)
 
-    fig.suptitle("Baseline vs Inception — Learning Curves (3 seeds)",
+    fig.suptitle("Baseline vs Experimental — Learning Curves (3 seeds)",
                  fontsize=14, fontweight="bold")
     fig.tight_layout()
     fig.savefig(os.path.join(RESULTS_DIR, "learning_curves.png"), dpi=150)
@@ -235,7 +242,7 @@ def plot_results(progress: dict):
     for ax, key, title in [(axes[0], "dev_f1", "Validation F1"),
                            (axes[1], "dev_loss", "Validation Loss")]:
         for agg, color, label in [(bl_agg, "tab:blue", "baseline"),
-                                  (inc_agg, "tab:orange", "inception")]:
+                                  (inc_agg, "tab:orange", "experimental")]:
             if not agg:
                 continue
             steps = agg["steps"]
@@ -255,7 +262,7 @@ def plot_results(progress: dict):
 
     # ── 3. Bar charts: test metrics, params, timing ──────────────────────────
     bl_params  = progress["param_counts"].get("baseline", {})
-    inc_params = progress["param_counts"].get("inception", {})
+    inc_params = progress["param_counts"].get("experimental", {})
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
@@ -267,14 +274,14 @@ def plot_results(progress: dict):
     inc_v = [inc_stats["test_f1"]["mean"], inc_stats["test_em"]["mean"]]
     inc_e = [inc_stats["test_f1"]["std"],  inc_stats["test_em"]["std"]]
     ax.bar(x - w/2, bl_v,  w, yerr=bl_e,  label="baseline",  capsize=4)
-    ax.bar(x + w/2, inc_v, w, yerr=inc_e, label="inception", capsize=4)
+    ax.bar(x + w/2, inc_v, w, yerr=inc_e, label="experimental", capsize=4)
     ax.set_xticks(x); ax.set_xticklabels(["F1", "EM"])
     ax.set_title("Test F1 & EM"); ax.legend(); ax.grid(True, alpha=0.3, axis="y")
 
     # Trainable parameters
     ax = axes[1]
     counts = [bl_params.get("trainable", 0), inc_params.get("trainable", 0)]
-    bars = ax.bar(["baseline", "inception"], counts,
+    bars = ax.bar(["baseline", "experimental"], counts,
                   color=["tab:blue", "tab:orange"])
     for bar, c in zip(bars, counts):
         ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
@@ -287,7 +294,7 @@ def plot_results(progress: dict):
             inc_stats["time_per_checkpoint"]["mean"]]
     errs = [bl_stats["time_per_checkpoint"]["std"],
             inc_stats["time_per_checkpoint"]["std"]]
-    ax.bar(["baseline", "inception"], vals, yerr=errs,
+    ax.bar(["baseline", "experimental"], vals, yerr=errs,
            color=["tab:blue", "tab:orange"], capsize=4)
     ax.set_title("Time per Checkpoint (s)"); ax.set_ylabel("Seconds")
     ax.grid(True, alpha=0.3, axis="y")
@@ -306,11 +313,11 @@ def plot_results(progress: dict):
 
 def print_summary(progress: dict):
     baseline_runs  = [r for r in progress["completed_runs"] if r["name"] == "baseline"]
-    inception_runs = [r for r in progress["completed_runs"] if r["name"] == "inception"]
+    inception_runs = [r for r in progress["completed_runs"] if r["name"] == "experimental"]
     bl  = aggregate_stats(baseline_runs)
     inc = aggregate_stats(inception_runs)
     bl_p  = progress["param_counts"].get("baseline", {})
-    inc_p = progress["param_counts"].get("inception", {})
+    inc_p = progress["param_counts"].get("experimental", {})
 
     def _fmt(s):
         return f"{s['mean']:.4f} +/- {s['std']:.4f}"
@@ -318,7 +325,7 @@ def print_summary(progress: dict):
     print(f"\n{'='*70}")
     print(f"  AGGREGATED RESULTS  ({len(SEEDS)} seeds: {SEEDS})")
     print(f"{'='*70}")
-    print(f"{'Metric':<25} {'Baseline':>20} {'Inception':>20}")
+    print(f"{'Metric':<25} {'Baseline':>20} {'Experimental':>20}")
     print("-" * 65)
     for label, bk, ik in [
         ("Test F1",              "test_f1",             "test_f1"),
@@ -343,7 +350,7 @@ def print_summary(progress: dict):
 
     f1_d = inc["test_f1"]["mean"] - bl["test_f1"]["mean"]
     em_d = inc["test_em"]["mean"] - bl["test_em"]["mean"]
-    print(f"\n  H1: Inception increases F1 and EM on the test set")
+    print(f"\n  H1: Experimental increases F1 and EM on the test set")
     print(f"      dF1 = {f1_d:+.4f},  dEM = {em_d:+.4f}")
     print(f"      -> {'SUPPORTED' if f1_d > 0 and em_d > 0 else 'NOT SUPPORTED'}")
 
@@ -355,15 +362,15 @@ def print_summary(progress: dict):
         total = len(bl_hist["dev_loss"])
         bl_final  = bl_hist["dev_loss"][-1]["mean"]
         inc_final = inc_hist["dev_loss"][-1]["mean"]
-        print(f"\n  H2: Inception accelerates convergence (lower loss per epoch)")
-        print(f"      Inception lower dev loss at {lower}/{total} checkpoints")
+        print(f"\n  H2: Experimental accelerates convergence (lower loss per epoch)")
+        print(f"      Experimental lower dev loss at {lower}/{total} checkpoints")
         print(f"      Final dev loss: baseline={bl_final:.4f}, "
-              f"inception={inc_final:.4f}")
+              f"experimental={inc_final:.4f}")
         print(f"      -> {'SUPPORTED' if lower > total / 2 else 'NOT SUPPORTED'}")
 
     param_d = inc_p.get("trainable", 0) - bl_p.get("trainable", 0)
     time_d  = inc["time_per_checkpoint"]["mean"] - bl["time_per_checkpoint"]["mean"]
-    print(f"\n  H3: Inception increases compute cost and parameter count")
+    print(f"\n  H3: Experimental increases compute cost and parameter count")
     print(f"      dParams = {param_d:+,}")
     print(f"      dTime/Ckpt = {time_d:+.2f}s")
     print(f"      -> {'SUPPORTED' if param_d > 0 and time_d > 0 else 'NOT SUPPORTED'}")
@@ -374,7 +381,7 @@ def print_summary(progress: dict):
 
 def save_final_results(progress: dict):
     baseline_runs  = [r for r in progress["completed_runs"] if r["name"] == "baseline"]
-    inception_runs = [r for r in progress["completed_runs"] if r["name"] == "inception"]
+    inception_runs = [r for r in progress["completed_runs"] if r["name"] == "experimental"]
     final = {
         "seeds": SEEDS,
         "num_runs_per_condition": len(SEEDS),
@@ -384,9 +391,9 @@ def save_final_results(progress: dict):
             "per_seed":            baseline_runs,
             "history_aggregated":  aggregate_histories(baseline_runs),
         },
-        "inception": {
+        "experimental": {
             "aggregated":          aggregate_stats(inception_runs),
-            "param_counts":        progress["param_counts"].get("inception", {}),
+            "param_counts":        progress["param_counts"].get("experimental", {}),
             "per_seed":            inception_runs,
             "history_aggregated":  aggregate_histories(inception_runs),
         },
@@ -404,7 +411,7 @@ if __name__ == "__main__":
     progress = load_progress()
 
     # Count parameters once
-    for name, use_inc in [("baseline", False), ("inception", True)]:
+    for name, use_inc in [("baseline", False), ("experimental", True)]:
         if name not in progress["param_counts"]:
             print(f"Counting {name} parameters...")
             progress["param_counts"][name] = count_parameters(use_inception=use_inc)
@@ -417,7 +424,7 @@ if __name__ == "__main__":
 
     # Paired runs: same seed for baseline & inception
     for seed in SEEDS:
-        for name, use_inception in [("baseline", False), ("inception", True)]:
+        for name, use_inception in [("baseline", False), ("experimental", True)]:
             if is_run_completed(progress, name, seed):
                 print(f"\nSkipping {name} seed={seed} (already completed)")
                 continue

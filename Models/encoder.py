@@ -135,3 +135,50 @@ class EncoderBlock(nn.Module):
         out = self.act(out)
         out = res + self.drop(out)
         return out
+
+class GlobalEncoderBlock(nn.Module):
+    def __init__(self, d_model: int, num_heads: int, dropout: float, conv_num: int, k: int, length: int, conv_class: type[nn.Module], init_name: str = "kaiming", act_name: str = "relu", norm_name: str = "layer_norm", norm_groups: int = 8):
+        super().__init__()
+        self.convs = nn.ModuleList([conv_class(d_model, d_model, k, init_name=init_name) for _ in range(conv_num)])
+        # Stochastic-depth dropout: p scales linearly with layer depth.
+        self.conv_drops = nn.ModuleList([Dropout(dropout * (i + 1) / conv_num) for i in range(conv_num)])
+        self.drop = Dropout(dropout)
+        self.self_att = MultiHeadAttention(d_model, num_heads, dropout)
+        self.fc = nn.Linear(d_model, d_model, bias=True)
+        self.pos = PosEncoder(d_model, length)
+        self.act = get_activation(act_name)
+
+        # Normalization over [C, L]; fixed length required for layer_norm.
+        self.normb = get_norm(norm_name, d_model, length, num_groups=norm_groups)
+        self.norms = nn.ModuleList([get_norm(norm_name, d_model, length, num_groups=norm_groups) for _ in range(conv_num)])
+        self.norme = get_norm(norm_name, d_model, length, num_groups=norm_groups)
+        self.L = conv_num
+
+    def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        
+        # 1: Pos encoding
+        out = self.pos(x)
+
+        # 2: Self attention
+        res = out
+        out = self.normb(out)
+        attn_out = self.self_att(out, mask)
+        out = res + self.drop(attn_out)
+
+        # 3: convolutional layer
+        for i, conv in enumerate(self.convs):
+            res = out
+            out = self.norms[i](out)
+            out = conv(out)
+            out = self.act(out)
+            if (i + 1) % 2 == 0:
+                out = self.conv_drops[i](out)
+            out = out + res
+
+        # 4: FFN
+        res = out
+        out = self.norme(out)
+        out = self.fc(out.transpose(1, 2)).transpose(1, 2)
+        out = self.act(out)
+        out = res + self.drop(out)
+        return out
